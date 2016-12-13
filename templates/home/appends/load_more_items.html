@@ -1,0 +1,458 @@
+{% load static %}
+{% load custom_filters %}
+{% load custom_loaders %}
+
+<!-- Loop all posts retrieve from views.py -->
+{% for post in posts %}
+    <!-- Type ID is 1: Question -->
+    {% if post.type_id == 1 %}
+        <div class="item row" id="item_{{ post.id }}">
+            <div class="col-lg-12" id="show_{{ post.id }}">
+                <!--
+                    Action Group (top right): if post is belong to logged in user, it will has 2 actions are delete and update
+                    else has 2 other actions are report and bookmark
+                -->
+                <div class="btn-group pull-right">
+                    <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown">
+                        <i class="fa fa-chevron-down"></i>
+                    </button>
+                    <ul class="dropdown-menu slidedown">
+                        {% if post.user_id == logged_user_id %}
+                            <li>
+                                <a href="/edit/{{ post.id }}">
+                                    <i class="fa fa-edit fa-fw"></i> Chỉnh sửa
+                                </a>
+                            </li>
+                            <li>
+                                <a class="delete_post" data="{{ post.id }}" data-toggle="dropdown">
+                                    <i class="fa fa-remove fa-fw"></i> Xóa
+                                </a>
+                            </li>
+                        {% else %}
+                            <li>
+                                <a href="/report/{{ post.id }}">
+                                    <i class="fa fa-ban fa-fw"></i> Báo cáo
+                                </a>
+                            </li>
+                            <li>
+                                <a class="save_post">
+                                    <i class="fa fa-bookmark fa-fw"></i> Lưu câu hỏi
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <p class="text-muted">Câu hỏi - <a href="#" class="text-muted">Python</a></p>
+                <a href="/detail/{{ post.id }}"><h3>{{ post.title }}</h3></a>
+
+                <!-- if question is not anonymous so show author's information: avatar (get from facebook graph),
+                full name (first name + last name), created date  -->
+                {% if post.is_anonymous == 0 %}
+                    <div class="post_info">
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <a class="avatar popover_profile" data-container=".container"
+                                   data-toggle="popover"
+                                   data-placement="bottom">
+                                    <img class="img-circle" src="{{ post.user_id|get_avatar }}">
+                                </a>
+                                <div class="poster_name">
+                                    <a class="popover_profile" data-container=".container" data-toggle="popover"
+                                       data-placement="bottom">
+                                        <h4>{{ post.user_id|get_fullname }}</h4></a>
+                                    <div class="clearfix">
+                                    </div>
+                                    <span class="text-muted">Đã viết {{ post.date_created }}</span>
+
+                                    <!-- Detail info when hover to author's avatar or name -->
+                                    <div class="popover_content">
+                                        <div>
+                                            <b>Example popover #2</b> - content
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- If question have detail so show with max 200 chars -->
+                {% if post.content != "" and post.content != None %}
+                    <div class="post_content">
+                        <div class="full_content">
+                            {{ post.content|safe }}
+                        </div>
+                        {% autoescape off %}
+                            {{ post.content|safe|truncatechars_html:200|linebreaks }}
+                        {% endautoescape %}
+                        <!-- If content's length is more than 200 chars so display "read more" link -->
+                        {% if post.content|length > 200 %}
+                            <a class="read_more_link">Đọc tiếp</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <!-- Question actions include: reply (show answer wrapper when click), follow post,
+                downvote (extends is redo and report and unfollow) -->
+                <div class="question_action">
+                    <button type="button" class="btn btn-info answer" data-id="false"><i class="fa fa-reply"></i>
+                        Trả lời
+                    </button>
+                    <a type="button"
+                       class="btn btn-link follow btn_follow_post {% if logged_user_id == post.user_id %}disabled{% endif %}">Theo
+                        dõi</a><span class="follow">{{ post.subcribers|get_followers }}</span>
+                    {% if logged_user_id != post.user_id %}
+                        <a type="button" class="btn btn-link downvote" data-id="{{ post.id }}"><i
+                                class="fa fa-thumbs-o-down"></i> Downvote</a>
+                    {% endif %}
+                </div>
+
+                <div class="answer_wrapper">
+                    <div class="question_widget">
+                        <form class="form_comment" method="post">
+                            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+                            <input id="content_{{ post.id }}" name="content" type="hidden">
+                            <input type="hidden" name="post_id" value="{{ post.id }}"/>
+                            <input type="hidden" name="is_update" value="0"/>
+                            <div class="form-group">
+                                <div class="editor_{{ post.id }} editor"></div>
+                                <script>
+                                    new Quill('.editor_{{ post.id }}', {
+                                        theme: 'snow'
+                                    });
+                                </script>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Gửi</button>
+                            <button type="button" class="btn btn-default pull-right dimiss_widget">Hủy</button>
+                            <a class="btn btn-social btn-facebook pull-right"><i class="fa fa-facebook"></i>&nbsp;Đăng
+                                lên Facebook</a>
+                        </form>
+                    </div>
+                    {% if post.id|get_answers|length > 0 %}
+                        <div class="answer-panel panel panel-default">
+                            <div class="panel-body">
+                                {% for answer in post.id|get_answers %}
+                                    <div id="comment_{{ answer.id }}" class="row">
+                                        <div class="answer_container col-lg-12">
+                                            <a href="#" class="cmt_avatar">
+                                                <img class="img-circle" src="{{ answer.user_id|get_avatar }}" alt="">
+                                            </a>
+                                            <div class="cmt_name">
+                                                <a class="popover_profile" data-container="body" data-toggle="popover"
+                                                   data-placement="bottom"><h5>{{ answer.user_id|get_fullname }}</h5>
+                                                </a>
+                                                <div class="clearfix"></div>
+                                                <div class="popover_content">
+                                                    <div>
+                                                        <b>Example popover #2</b> - content
+                                                    </div>
+                                                </div>
+                                                <span class="render_text">
+                                           		{{ answer.content|safe }}
+                                                </span>
+                                                <div class="cmt_action">
+                                                    <form class="form_reply" method="post">
+                                                        <input type="hidden" name="csrfmiddlewaretoken"
+                                                               value="{{ csrf_token }}"/>
+                                                        <input type="text" class="input-sm rep_box" name="reply_content"
+                                                               placeholder="Phản hồi... Nhấn enter để gửi">
+                                                        <input type="hidden" name="post_id" value="{{ post.id }}"/>
+                                                        <input type="hidden" name="parent_id" value="{{ answer.id }}"/>
+                                                        <div class="cmt_action_links">
+                                                            {% if answer.user_id != logged_user_id %}
+                                                                <a class="btn btn-link">
+                                                                    {% with answer.id|stringformat:"i" as id %}
+                                                                        {% if logged_user_id|stringformat:"i"|add:","|add:id|liked == "0" %}
+                                                                            <span class="text-muted upvote_comment">Upvote ({{ answer.id|count_upvote }})</span>
+                                                                        {% else %}
+                                                                            <span class="text-primary upvote_comment">Bỏ Upvote ({{ answer.id|count_upvote }})</span>
+                                                                        {% endif %}
+                                                                    {% endwith %}
+                                                                </a>
+                                                                <a class="btn btn-link">
+                                                                    {% with answer.id|stringformat:"i" as id %}
+                                                                        {% if logged_user_id|stringformat:"i"|add:","|add:id|disliked == "0" %}
+                                                                            <span class="text-muted downvote_comment">Downvote ({{ answer.id|count_downvote }})</span>
+                                                                        {% else %}
+                                                                            <span class="text-primary downvote_comment">Bỏ Downvote ({{ answer.id|count_downvote }})</span>
+                                                                        {% endif %}
+                                                                    {% endwith %}
+                                                                </a>
+                                                            {% else %}
+                                                                <a class="btn btn-link"><span
+                                                                        class="text-muted edit_comment">Chỉnh sửa</span></a>
+                                                                <a class="btn btn-link"><span
+                                                                        class="text-muted delete_comment"
+                                                                        data="{{ answer.id }}">Xóa</span></a>
+                                                            {% endif %}
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                                <div class="reply_wrapper">
+                                                    {% for reply in answer.id|get_replies %}
+                                                        <div class="rep_container col-lg-12">
+                                                            <a href="#" class="rep_avatar">
+                                                                <img class="img-circle"
+                                                                     src="{{ reply.user_id|get_avatar }}">
+                                                            </a>
+                                                            <div class="cmt_name">
+                                                                <a class="popover_profile" data-container="body"
+                                                                   data-toggle="popover" data-placement="bottom">
+                                                                    <h5>{{ reply.user_id|get_fullname }}</h5></a>
+                                                                <div class="clearfix"></div>
+                                                                <div class="popover_content">
+                                                                    <div>
+                                                                        <b>Example popover #2</b> - content
+                                                                    </div>
+                                                                </div>
+                                                                <span class="render_text">
+                                                                {{ reply.content }}
+                                                            </span>
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <!-- /.panel-body -->
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-12 downvote_well" id="hide_{{ post.id }}">
+                <div class="well">
+                    <h4>Bạn đã bỏ phiếu bác bỏ câu hỏi này.</h4>
+                    <p>Bỏ phiếu bác bỏ các nội dung chất lượng thấp để giúp <strong>IT Talk</strong> tốt hơn.</p>
+                    <button type="button" class="btn btn-link undo" data-id="{{ post.id }}">Hoàn tác</button>
+                    <a href="/report/{{ post.id }}" class="btn btn-link">Báo cáo</a>
+                </div>
+                <hr>
+            </div>
+        </div>
+    {% endif %}
+    <!-- Type ID is 2: Post -->
+    {% if post.type_id == 2 %}
+        <div class="item row" id="item_{{ post.id }}">
+            <div class="col-lg-12" id="show_{{ post.id }}">
+                <input type="hidden" name="post_id" value="{{ post.id }}"/>
+                <div class="btn-group pull-right">
+                    <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown">
+                        <i class="fa fa-chevron-down"></i>
+                    </button>
+                    <ul class="dropdown-menu slidedown">
+                        {% if post.user_id == logged_user_id %}
+                            <li>
+                                <a href="/edit/{{ post.id }}">
+                                    <i class="fa fa-edit fa-fw"></i> Chỉnh sửa
+                                </a>
+                            </li>
+                            <li>
+                                <a class="delete_post" data="{{ post.id }}" data-toggle="dropdown">
+                                    <i class="fa fa-remove fa-fw"></i> Xóa
+                                </a>
+                            </li>
+                        {% else %}
+                            <li>
+                                <a href="/report/{{ post.id }}">
+                                    <i class="fa fa-ban fa-fw"></i> Báo cáo
+                                </a>
+                            </li>
+                            <li>
+                                <a class="save_post">
+                                    <i class="fa fa-bookmark fa-fw"></i> Lưu câu hỏi
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <p class="text-muted">Bài viết - <a href="#" class="text-muted">Django</a></p>
+                <a href="/detail/{{ post.id }}"><h3>{{ post.title }}</h3></a>
+                <div class="post_info">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <a class="avatar popover_profile" data-container=".container"
+                               data-toggle="popover" data-placement="bottom">
+                                <img class="img-circle" src="{{ post.user_id|get_avatar }}">
+                            </a>
+                            <div class="poster_name">
+                                <a class="popover_profile" data-container=".container" data-toggle="popover"
+                                   data-placement="bottom">
+                                    <h4>{{ post.user_id|get_fullname }}</h4></a>
+                                <div class="clearfix"></div>
+                                <span class="text-muted">Đã viết {{ post.date_created }}</span>
+                                <div class="popover_content">
+                                    <div>
+                                        <b>Example popover #2</b> - content
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="post_content">
+                    <div class="full_content">
+                        {{ post.content|safe }}
+                    </div>
+                    {% if post.content|has_image == "0" %}
+                        {% autoescape off %}
+                            {{ post.content|safe|truncatechars_html:200|linebreaks }}
+                        {% endautoescape %}
+                    {% else %}
+                        <div class="truncated_img">
+                            <img src="{{ post.content|get_first_image }}" class="img-responsive"/>
+                        </div>
+                        <div class="truncated_content">
+                            {% autoescape off %}
+                                {{ post.content|convert_content|safe|truncatechars_html:200|linebreaks }}
+                            {% endautoescape %}
+                        </div>
+                        <a class="read_more_link">Đọc tiếp</a>
+                    {% endif %}
+                </div>
+                <div class="post_action">
+                    <span class="text-muted">100 Lượt xem</span>
+                    <a class="btn btn-link">Xem các lượt Upvote</a>
+                    <div class="clearfix"></div>
+                    <a class="btn btn-info upvote_post">
+                        {% with post.id|stringformat:"i" as id %}
+                            {% if logged_user_id|stringformat:"i"|add:","|add:id|upvoted_post == "0" %}
+                                <i class="fa fa-thumbs-o-up"></i> Upvote
+                            {% else %}
+                                <i class="fa fa-thumbs-o-down"></i> Bỏ Upvote
+                            {% endif %}
+                            &nbsp;|&nbsp;
+                            <span class="upvote_count">{{ post.id|upvote_post_count }}</span>
+                        {% endwith %}
+                    </a>
+                    <a class="btn btn-link downvote" data-id="{{ post.id }}">
+                        <span class="text-muted">Downvote</span>
+                    </a>
+                    <a class="btn btn-link comment"><span class="text-muted">Bình luận</span></a><span
+                        class="follow">100</span>
+                </div>
+
+                <div class="cmt_pannel answer-panel panel panel-default">
+                    <form class="form_comment_post" method="post">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+                        <input type="hidden" name="post_id" value="{{ post.id }}"/>
+                        <input type="hidden" name="is_update" value="0"/>
+                        <div class="panel-heading">
+                            <div class="input-group">
+                                <input name="content" type="text" class="form-control input-sm" placeholder="Nhập bình luận...">
+                                <span class="input-group-btn">
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        Bình luận
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                    </form>
+                    {% if post.id|get_answers|length > 0 %}
+                        <div class="panel-body">
+                            {% for answer in post.id|get_answers %}
+                                <div id="comment_{{ answer.id }}" class="row">
+                                    <div class="answer_container col-lg-12">
+                                        <a href="#" class="cmt_avatar">
+                                            <img class="img-circle" src="{{ answer.user_id|get_avatar }}" alt="">
+                                        </a>
+                                        <div class="cmt_name">
+                                            <a class="popover_profile" data-container="body" data-toggle="popover"
+                                               data-placement="bottom"><h5>{{ answer.user_id|get_fullname }}</h5>
+                                            </a>
+                                            <div class="clearfix"></div>
+                                            <div class="popover_content">
+                                                <div>
+                                                    <b>Example popover #2</b> - content
+                                                </div>
+                                            </div>
+                                            <span class="render_text">
+                                           		{{ answer.content|safe }}
+                                                </span>
+                                            <div class="cmt_action">
+                                                <form class="form_reply" method="post">
+                                                    <input type="hidden" name="csrfmiddlewaretoken"
+                                                           value="{{ csrf_token }}"/>
+                                                    <input type="text" class="input-sm rep_box" name="reply_content"
+                                                           placeholder="Phản hồi... Nhấn enter để gửi">
+                                                    <input type="hidden" name="post_id" value="{{ post.id }}"/>
+                                                    <input type="hidden" name="parent_id" value="{{ answer.id }}"/>
+                                                    <div class="cmt_action_links">
+                                                        {% if answer.user_id != logged_user_id %}
+                                                            <a class="btn btn-link">
+                                                                {% with answer.id|stringformat:"i" as id %}
+                                                                    {% if logged_user_id|stringformat:"i"|add:","|add:id|liked == "0" %}
+                                                                        <span class="text-muted upvote_comment">Upvote ({{ answer.id|count_upvote }})</span>
+                                                                    {% else %}
+                                                                        <span class="text-primary upvote_comment">Bỏ Upvote ({{ answer.id|count_upvote }})</span>
+                                                                    {% endif %}
+                                                                {% endwith %}
+                                                            </a>
+                                                            <a class="btn btn-link">
+                                                                {% with answer.id|stringformat:"i" as id %}
+                                                                    {% if logged_user_id|stringformat:"i"|add:","|add:id|disliked == "0" %}
+                                                                        <span class="text-muted downvote_comment">Downvote ({{ answer.id|count_downvote }})</span>
+                                                                    {% else %}
+                                                                        <span class="text-primary downvote_comment">Bỏ Downvote ({{ answer.id|count_downvote }})</span>
+                                                                    {% endif %}
+                                                                {% endwith %}
+                                                            </a>
+                                                        {% else %}
+                                                            <a class="btn btn-link"><span
+                                                                    class="text-muted edit_comment">Chỉnh sửa</span></a>
+                                                            <a class="btn btn-link"><span
+                                                                    class="text-muted delete_comment"
+                                                                    data="{{ answer.id }}">Xóa</span></a>
+                                                        {% endif %}
+                                                    </div>
+                                                </form>
+                                            </div>
+                                            <div class="reply_wrapper">
+                                                {% for reply in answer.id|get_replies %}
+                                                    <div class="rep_container col-lg-12">
+                                                        <a href="#" class="rep_avatar">
+                                                            <img class="img-circle"
+                                                                 src="{{ reply.user_id|get_avatar }}">
+                                                        </a>
+                                                        <div class="cmt_name">
+                                                            <a class="popover_profile" data-container="body"
+                                                               data-toggle="popover" data-placement="bottom">
+                                                                <h5>{{ reply.user_id|get_fullname }}</h5></a>
+                                                            <div class="clearfix"></div>
+                                                            <div class="popover_content">
+                                                                <div>
+                                                                    <b>Example popover #2</b> - content
+                                                                </div>
+                                                            </div>
+                                                            <span class="render_text">
+                                                                {{ reply.content }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <!-- /.panel-body -->
+                    {% endif %}
+                </div>
+
+            </div>
+            <div class="col-lg-12 downvote_well" id="hide_{{ post.id }}">
+                <div class="well">
+                    <h4>Bạn đã bỏ phiếu bác bỏ câu hỏi này.</h4>
+                    <p>Bỏ phiếu bác bỏ các nội dung chất lượng thấp để giúp <strong>IT Talk</strong> tốt hơn.</p>
+                    <button type="button" class="btn btn-link undo" data-id="{{ post.id }}">Hoàn tác</button>
+                    <a href="/report/{{ post.id }}" class="btn btn-link">Báo cáo</a>
+                </div>
+                <hr>
+            </div>
+        </div>
+    {% endif %}
+{% endfor %}

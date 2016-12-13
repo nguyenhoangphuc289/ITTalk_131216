@@ -1,0 +1,59 @@
+{% load custom_filters %}
+<div id="comment_{{ answer.id }}" class="row">
+    <div class="answer_container col-lg-12">
+        <a href="#" class="cmt_avatar">
+            <img class="img-circle" src="{{ answer.user_id|get_avatar }}" alt="">
+        </a>
+        <div class="cmt_name">
+            <a class="popover_profile" data-container="body" data-toggle="popover"
+               data-placement="bottom"><h5>{{ answer.user_id|get_fullname }}</h5>
+            </a>
+            <div class="clearfix"></div>
+            <div class="popover_content">
+                <div>
+                    <b>Example popover #2</b> - content
+                </div>
+            </div>
+            <span class="render_text">{{ answer.content|safe }}</span>
+            <div class="cmt_action">
+                <form class="form_reply" method="post">
+                    <input type="hidden" name="csrfmiddlewaretoken"
+                           value="{{ csrf_token }}"/>
+                    <input type="text" class="input-sm rep_box" name="reply_content"
+                           placeholder="Phản hồi... Nhấn enter để gửi">
+                    <input type="hidden" name="post_id" value="{{ post_id }}"/>
+                    <input type="hidden" name="parent_id" value="{{ answer.id }}"/>
+                    <div class="cmt_action_links">
+                        {% if answer.user_id != logged_user_id %}
+                            <a class="btn btn-link">
+                                {% with answer.id|stringformat:"i" as id %}
+                                    {% if logged_user_id|stringformat:"i"|add:","|add:id|liked == "0" %}
+                                        <span class="text-muted upvote_comment">Upvote ({{ answer.id|count_upvote }})</span>
+                                    {% else %}
+                                        <span class="text-primary upvote_comment">Bỏ Upvote ({{ answer.id|count_upvote }})</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </a>
+                            <a class="btn btn-link">
+                                {% with answer.id|stringformat:"i" as id %}
+                                    {% if logged_user_id|stringformat:"i"|add:","|add:id|disliked == "0" %}
+                                        <span class="text-muted downvote_comment">Downvote ({{ answer.id|count_downvote }})</span>
+                                    {% else %}
+                                        <span class="text-primary downvote_comment">Bỏ Downvote ({{ answer.id|count_downvote }})</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </a>
+                        {% else %}
+                            <a class="btn btn-link"><span
+                                    class="text-muted edit_comment">Chỉnh sửa</span></a>
+                            <a class="btn btn-link"><span
+                                    class="text-muted delete_comment"
+                                    data="{{ answer.id }}">Xóa</span></a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+            <div class="reply_wrapper"></div>
+        </div>
+    </div>
+</div>

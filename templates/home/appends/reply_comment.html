@@ -1,0 +1,21 @@
+{% load custom_filters %}
+<div class="rep_container col-lg-12">
+    <a href="#" class="rep_avatar">
+        <img class="img-circle"
+             src="{{ reply.user_id|get_avatar }}">
+    </a>
+    <div class="cmt_name">
+        <a class="popover_profile" data-container="body"
+           data-toggle="popover" data-placement="bottom">
+            <h5>{{ reply.user_id|get_fullname }}</h5></a>
+        <div class="clearfix"></div>
+        <div class="popover_content">
+            <div>
+                <b>Example popover #2</b> - content
+            </div>
+        </div>
+        <span class="render_text">
+            {{ reply.content }}
+        </span>
+    </div>
+</div>
